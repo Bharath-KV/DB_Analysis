@@ -39,8 +39,6 @@ let analyze = async () => {
         t.rowSize = String((t.tablesize/t.rowcount)/1024) + ' KB';
     });
 
-    // let tables = JSON.stringify(tableSizesArray.rows);
-
     dbRes = {
         dbSize: dbSize.rows[0].pg_database_size, 
         tableSizesArray: tableSizesArray.rows
