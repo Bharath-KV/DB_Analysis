@@ -1,11 +1,12 @@
 `use strict`;
 
+// Common NPM Modules
+let modules = require('./module');
+
 // Postgresql Credentials
 let db = require('./config');
 
-let dbSize;
 let tableSizesArray;
-let dbRes = [];
 
 let query = ``;
 
@@ -24,27 +25,27 @@ let analyze = async () => {
                                         table_schema, 
                                         table_name), 
                                         false, 
-                                        true, '')))[1]::text::int as rowcount
+                                        true, '')))[1]::text::int as totalrows
             FROM 
             information_schema.tables
             WHERE 
             table_schema = 'source'
             OR
-            table_schema = 'target'`;
+            table_schema = 'target'
+            ORDER BY table_schema`;
 
     // Execute query
     tableSizesArray = await db.query(query);
 
     tableSizesArray.rows.map(t => {
-        t.rowSize = String((t.tablesize/t.rowcount)/1024) + ' KB';
+        t.SizePerRow = (t.tablesize/t.totalrows)/1024 > 1 ? 
+                    String((t.tablesize/t.totalrows)/1024) + ' KB' : 
+                    String((t.tablesize/t.totalrows)/(1024 * 2)) + ' MB';
     });
 
-    dbRes = {
-        dbSize: dbSize.rows[0].pg_database_size, 
-        tableSizesArray: tableSizesArray.rows
-    };
+    let xls = modules.json2xls(tableSizesArray.rows);
 
-    console.log(dbRes);
+    modules.fs.writeFileSync('dbAnalysis.xlsx', xls, 'binary');
 
 }
 
