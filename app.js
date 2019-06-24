@@ -17,25 +17,36 @@ let analyze = async () => {
     dbSize = await db.query(query);
 
     query = `SELECT 
-        table_schema,
-        table_name,
-        pg_size_pretty(pg_total_relation_size('"'||table_schema||'"."'||table_name||'"')) AS table_size
-        FROM 
-        information_schema.tables 
-        WHERE 
-        table_schema = 'source'
-        OR
-        table_schema = 'target'`;
+            table_schema,
+            table_name,
+            pg_total_relation_size('"'||table_schema||'"."'||table_name||'"')::text::int AS tablesize,
+            (xpath('/row/cnt/text()', query_to_xml(format('select count(*) as cnt from %I.%I', 
+                                        table_schema, 
+                                        table_name), 
+                                        false, 
+                                        true, '')))[1]::text::int as rowcount
+            FROM 
+            information_schema.tables
+            WHERE 
+            table_schema = 'source'
+            OR
+            table_schema = 'target'`;
 
     // Execute query
     tableSizesArray = await db.query(query);
 
+    tableSizesArray.rows.map(t => {
+        t.rowSize = String((t.tablesize/t.rowcount)/1024) + ' KB';
+    });
+
+    // let tables = JSON.stringify(tableSizesArray.rows);
+
     dbRes = {
         dbSize: dbSize.rows[0].pg_database_size, 
-        tableSizesArray: JSON.stringify(tableSizesArray.rows)
+        tableSizesArray: tableSizesArray.rows
     };
 
-    console.log(JSON.parse(dbRes.tableSizesArray));
+    console.log(dbRes);
 
 }
 
